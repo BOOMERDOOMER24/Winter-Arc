@@ -383,7 +383,7 @@
 
     <p class="eyebrow">Backup &amp; revisit</p>
     <div class="card pad">
-      <p class="sub" style="margin-top:0">Your plan and logs live only on this phone. Copy them to back up or move to a new phone.</p>
+      <p class="sub" style="margin-top:0">When connected, your plan and logs sync to your account in the shared gist, so they're back on any device where you connect with the same name. This backup is an extra copy.</p>
       <div class="field"><button class="btn" id="expBtn">Copy my data</button><button class="btn ghost" id="impToggle">Restore…</button></div>
       <div id="impWrap" hidden style="margin-top:8px">
         <textarea id="impText" rows="3" placeholder="Paste a backup here" aria-label="Paste backup data" style="width:100%;padding:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:9px;font-family:var(--mono);font-size:12px"></textarea>
@@ -393,14 +393,37 @@
     </div>
   </section>
 
-  <p class="foot">Winter Arc · your plan stays on this phone<br>Only daily kcal totals are shared with the group.</p>
+  <p class="foot">Winter Arc · your section syncs to your account when connected<br>Everyone with the board token can read the board.</p>
 </main>
 
 <script>
 (function(){
   "use strict";
+  /* ---------- storage ----------
+     LS.set on a SYNC_KEYS key (or wa-meals, per day) records a change timestamp so the
+     account profile in the gist can be merged per section / per day (newest wins).
+     LS.raw writes without stamping — used when applying data that came from the gist. */
+  var SYNC_KEYS=["wa-profile","wa-mymeals","wa-weights","wa-lifts","wa-liftnames","wa-shop","wa-recent","wa-rot"];
+  function isEmptyVal(v){return v==null||(Array.isArray(v)&&!v.length)||(typeof v==="object"&&!Array.isArray(v)&&!Object.keys(v).length);}
   var LS={get:function(k,f){try{var v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
-          set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+          raw:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},
+          set:function(k,v){
+            if(SYNC_KEYS.indexOf(k)>=0||k==="wa-meals"){
+              var old=LS.get(k,null),now=Date.now();
+              if(k==="wa-meals"){
+                var mts=LS.get("wa-meals-ts",{}),o=old||{},n=v||{},ch=false;
+                Object.keys(n).forEach(function(d){
+                  var a=o[d],b=n[d];if(JSON.stringify(a)===JSON.stringify(b))return;
+                  if(a===undefined&&isEmptyVal(b))return; // a fresh empty day is not an edit
+                  mts[d]=now;ch=true;});
+                if(ch){LS.raw("wa-meals-ts",mts);schedulePush();}
+              }else if(JSON.stringify(old)!==JSON.stringify(v)&&!(old==null&&isEmptyVal(v))){
+                var sts=LS.get("wa-sects-ts",{});sts[k]=now;LS.raw("wa-sects-ts",sts);schedulePush();
+              }
+            }
+            LS.raw(k,v);
+          }};
+  function schedulePush(){if(typeof SYNC!=="undefined"&&SYNC&&SYNC.on)pushMyDay();}
   var $=function(id){return document.getElementById(id);};
   function e1rm(w,r){return Math.round(w*(1+r/30));}
   function todayISO(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -411,8 +434,14 @@
   function show(key){
     tabs.forEach(function(t){var on=t[2]===key;$(t[0]).setAttribute("aria-selected",on?"true":"false");$(t[1]).hidden=!on;});
     LS.set("wa-tab",key);
+    renderTab(key);
+    if(key==="meals"&&SYNC.on)pullSync();
+  }
+  function curTab(){for(var i=0;i<tabs.length;i++)if(!$(tabs[i][1]).hidden)return tabs[i][2];return "today";}
+  function renderTab(key){
+    if(typeof renderHeader==="function")renderHeader();
     if(key==="today")renderToday();
-    if(key==="meals"){renderMeals();renderChallenge();if(SYNC.on)pullSync();}
+    if(key==="meals"){renderMeals();renderChallenge();}
     if(key==="train")renderTrain();
     if(key==="eat")renderEat();
     if(key==="shop")renderShop();
@@ -421,7 +450,7 @@
   tabs.forEach(function(t){$(t[0]).addEventListener("click",function(){show(t[2]);try{history.replaceState(null,"","#"+t[2]);}catch(e){location.hash=t[2];}window.scrollTo({top:0});});});
 
   /* ====================================================
-     PERSONAL PROFILE — everything here lives on this phone only
+     PERSONAL PROFILE — stored locally, synced to gist.profiles[myName] when connected
      wa-profile = {goalKg, note, split:[{t, ex:[{nm,rx,note}]}], eatNotes, shop:[{id,nm,pr}]}
      ==================================================== */
   function prof(){var p=LS.get("wa-profile",null);if(!p||typeof p!=="object")p={};
@@ -872,6 +901,7 @@
   function ghHeaders(){return {"Authorization":"token "+SYNC.token,"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
   function localGoal(){return {goal:GOAL,ts:histMaxTs(GOAL_HIST)};}
   var GIST_RAW={}; // last read file content — unknown fields are written back untouched
+  var MY_PROFILE=null; // my merged account profile, written into gist.profiles[myName]
   function createGist(){
     var body={description:"Winter Arc 3000 Challenge board",public:false,files:{}};
     var g=localGoal();
@@ -882,7 +912,11 @@
   function readGist(){
     return fetch("https://api.github.com/gists/"+SYNC.gist,{headers:ghHeaders(),cache:"no-store"})
       .then(function(r){if(!r.ok)throw new Error("read "+r.status);return r.json();})
-      .then(function(j){var f=j.files&&j.files[GIST_FILE];var c=f&&f.content?JSON.parse(f.content):{};
+      .then(function(j){var f=j.files&&j.files[GIST_FILE];
+        // the API truncates file content above ~1 MB; fetch the raw file instead
+        if(f&&f.truncated&&f.raw_url)return fetch(f.raw_url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("raw "+r.status);return r.text();});
+        return f&&f.content?f.content:"";})
+      .then(function(txt){var c=txt?JSON.parse(txt):{};
         GIST_RAW=(c&&typeof c==="object")?c:{};
         return {board:c.board||{},goal:+c.goal||0,goalTs:+c.goalTs||0,goalHistory:Array.isArray(c.goalHistory)?c.goalHistory:[]};});
   }
@@ -890,15 +924,52 @@
     var g=localGoal(),body={files:{}},out={};
     Object.keys(GIST_RAW).forEach(function(k){out[k]=GIST_RAW[k];});
     out.app="winter-arc-challenge";out.board=board;out.goal=g.goal;out.goalTs=g.ts;out.goalHistory=GOAL_HIST;
+    if(MY_PROFILE){var ps={},src=(out.profiles&&typeof out.profiles==="object")?out.profiles:{};
+      Object.keys(src).forEach(function(n){ps[n]=src[n];});ps[SYNC.name||"You"]=MY_PROFILE;out.profiles=ps;}
     body.files[GIST_FILE]={content:JSON.stringify(out)};
     return fetch("https://api.github.com/gists/"+SYNC.gist,{method:"PATCH",headers:ghHeaders(),body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)throw new Error("write "+r.status);return r.json();});
   }
   // a new target applies from today on (or from the start, if set before it); past days keep theirs
   function setGoal(v,ts){saveHist(mergeHist(GOAL_HIST,[{from:clampFrom(todayISO()),kcal:v,ts:ts}]));}
+  /* ---------- account profile: profiles[name] = {sec:{key:{v,ts}}, days:{date:{v,ts}}} ----------
+     Each person's whole section (plan, meals list, logs, shopping, food log) lives in the gist,
+     so a new phone / second device gets everything back. Merge: per section and per day, newest
+     ts wins; a device only ever writes its own profile. */
+  function migrateStamps(){
+    // data that existed before profile sync gets ts=1: beats "nothing in the gist", loses to any real edit
+    var sts=LS.get("wa-sects-ts",{}),mts=LS.get("wa-meals-ts",{}),ch=false;
+    SYNC_KEYS.forEach(function(k){if(!(k in sts)&&!isEmptyVal(LS.get(k,null))){sts[k]=1;ch=true;}});
+    var m=LS.get("wa-meals",{});Object.keys(m).forEach(function(d){if(!(d in mts)&&!isEmptyVal(m[d])){mts[d]=1;ch=true;}});
+    if(ch){LS.raw("wa-sects-ts",sts);LS.raw("wa-meals-ts",mts);}
+  }
+  function mergeProfile(rp){
+    rp=(rp&&typeof rp==="object")?rp:{};
+    var rsec=rp.sec||{},rdays=rp.days||{},sts=LS.get("wa-sects-ts",{}),mts=LS.get("wa-meals-ts",{});
+    var out={v:1,sec:{},days:{}},changed=false;
+    SYNC_KEYS.forEach(function(k){
+      var lt=+sts[k]||0,lv=LS.get(k,null),r=rsec[k];
+      if(r&&(+r.ts||0)>lt){LS.raw(k,r.v);sts[k]=+r.ts;out.sec[k]=r;changed=true;}
+      else if(lt>0||!isEmptyVal(lv)){out.sec[k]={v:lv,ts:lt};}
+      else if(r){out.sec[k]=r;}
+    });
+    var meals=LS.get("wa-meals",{});
+    Object.keys(rdays).forEach(function(d){
+      var r=rdays[d];if(r&&(+r.ts||0)>(+mts[d]||0)){meals[d]=r.v;mts[d]=+r.ts;changed=true;}
+    });
+    Object.keys(meals).forEach(function(d){if(!isEmptyVal(meals[d])||mts[d])out.days[d]={v:meals[d],ts:+mts[d]||0};});
+    if(changed){LS.raw("wa-meals",meals);}
+    LS.raw("wa-sects-ts",sts);LS.raw("wa-meals-ts",mts);
+    out.ts=Date.now();
+    return {profile:out,changed:changed};
+  }
   // newer goal wins (whoever changed it last), then merge boards and push my column
   function syncOnce(){
     return readGist().then(function(r){
+      // account profile first: pulls my plan/logs/days from the gist (new phone, second device)
+      var me=SYNC.name||"You",profiles=(GIST_RAW.profiles&&typeof GIST_RAW.profiles==="object")?GIST_RAW.profiles:{};
+      var pm=mergeProfile(profiles[me]);
+      MY_PROFILE=pm.profile;
       // goals: union of both histories; a newer goal from an old-version phone becomes an entry
       saveHist(foldLegacy(mergeHist(GOAL_HIST,r.goalHistory),r.goal,r.goalTs));
       // gist = backup: restore any of my days missing locally (new phone, cleared/evicted storage)
@@ -912,8 +983,8 @@
       var merged={};Object.keys(r.board).forEach(function(n){merged[n]=r.board[n];});
       merged[SYNC.name||"You"]=myTotals();
       LS.set("wa-board",merged);
-      if($("p-meals").hidden===false){renderMeals();}
-      renderChallenge();
+      if(pm.changed)renderTab(curTab());
+      else{if($("p-meals").hidden===false){renderMeals();}renderChallenge();}
       return writeGist(merged);
     });
   }
@@ -952,7 +1023,10 @@
   });
 
   /* ---------- boot ---------- */
+  migrateStamps();
   loadSync();
+  if(SYNC.on&&initial()!=="meals")pullSync();
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&SYNC.on)pullSync();});
   renderShop();
   function initial(){var h=(location.hash||"").replace("#","");for(var i=0;i<tabs.length;i++)if(tabs[i][2]===h)return h;var s=LS.get("wa-tab",null);return s||"today";}
   show(initial());
