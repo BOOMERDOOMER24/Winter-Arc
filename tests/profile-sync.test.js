@@ -1,15 +1,21 @@
 const {JSDOM}=require('jsdom');const fs=require('fs');
 const html=fs.readFileSync(process.env.F||require('path').join(__dirname,'..','index.html'),'utf8');
-let GIST=null,writes=0;
+let GIST=null,writes=0,LAST_CH=null;const CH='winter-arc-challenge.json',PF='winter-arc-profiles.json';
 function boot(ls,name){
   const dom=new JSDOM(html,{runScripts:"outside-only",pretendToBeVisual:true,url:"https://x.test/#today"});
   const w=dom.window;
   for(const k in ls)w.localStorage.setItem(k,JSON.stringify(ls[k]));
   w.localStorage.setItem('wa-sync',JSON.stringify({token:'t',gist:'g'}));
   w.localStorage.setItem('wa-myname',JSON.stringify(name));
+  // mocked gist with two files: the board file and the profiles file (PATCH only touches files it names)
   w.fetch=async(url,opt={})=>{
-    if(opt.method==='PATCH'){writes++;GIST=JSON.parse(JSON.parse(opt.body).files['winter-arc-challenge.json'].content);return {ok:true,json:async()=>({})};}
-    return {ok:true,json:async()=>({files:{'winter-arc-challenge.json':{content:JSON.stringify(GIST)}}})};
+    if(opt.method==='PATCH'){writes++;const f=JSON.parse(opt.body).files;
+      if(f[CH]){const c=JSON.parse(f[CH].content);LAST_CH=JSON.parse(f[CH].content);const p=GIST&&GIST.profiles;GIST=c;if(p)GIST.profiles=p;}
+      if(f[PF]){GIST.profiles=JSON.parse(f[PF].content).profiles;}
+      return {ok:true,json:async()=>({})};}
+    const {profiles,...ch}=GIST;const files={[CH]:{content:JSON.stringify(ch)}};
+    if(profiles)files[PF]={content:JSON.stringify({app:"winter-arc-profiles",profiles})};
+    return {ok:true,json:async()=>({files})};
   };
   w.scrollTo=()=>{};const errs=[];w.addEventListener('error',e=>errs.push(e.message));
   w.eval(html.match(/<script>([\s\S]*)<\/script>/)[1]);
@@ -56,6 +62,12 @@ const ok=(c,m)=>console.log((c?"PASS ":"FAIL ")+m);
   ok(L(p1,"wa-profile").split[0].t==="Legs","E: profile kept");
   // F: goal history + unknown field still preserved
   ok(Array.isArray(GIST.goalHistory)&&GIST.goal===3000,"F: goal fields intact");
+  ok(LAST_CH&&!("profiles" in LAST_CH),"G: board file carries no profiles");
+  { // G: an old cached client rewrites only the board file -> profiles survive
+    const before=JSON.stringify(GIST.profiles);
+    const {profiles,...ch}=GIST;GIST={app:"winter-arc-challenge",board:ch.board,goal:3000,goalTs:0,profiles};
+    ok(JSON.stringify(GIST.profiles)===before&&GIST.profiles.Finn,"G: old-client board write leaves profiles intact");
+  }
   ok([p1,p2].every(w=>!w._errs.length),"no JS errors "+[p1,p2].map(w=>w._errs.join(";")).join("|"));
   console.log("writes:",writes);
 })().catch(e=>console.error("ERR",e));

@@ -12,7 +12,7 @@ function boot(now,ls,name){
   w.localStorage.setItem('wa-myname',JSON.stringify(name));
   w.fetch=async(url,opt={})=>{
     if(opt.method==='PATCH'){GIST=JSON.parse(JSON.parse(opt.body).files['winter-arc-challenge.json'].content);return {ok:true,json:async()=>({})};}
-    return {ok:true,json:async()=>({files:{'winter-arc-challenge.json':{content:JSON.stringify(GIST)}}})};
+    return {ok:true,json:async()=>({files:{'winter-arc-challenge.json':{content:JSON.stringify(GIST)}}})}; // profiles file absent: fine
   };
   w.scrollTo=()=>{};
   const src=html.match(/<script>([\s\S]*)<\/script>/)[1];

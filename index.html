@@ -909,24 +909,39 @@
     return fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)throw new Error("create "+r.status);return r.json();}).then(function(j){return j.id;});
   }
+  // profiles live in their own file: a gist PATCH only touches the files it names, so a phone
+  // running an old cached version (which only rewrites GIST_FILE) can never wipe anyone's account
+  var PROF_FILE="winter-arc-profiles.json";
+  var PROF_RAW={}; // last read profiles file — unknown fields are written back untouched
+  function fileText(f){
+    if(!f)return Promise.resolve("");
+    // the API truncates file content above ~1 MB; fetch the raw file instead
+    if(f.truncated&&f.raw_url)return fetch(f.raw_url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("raw "+r.status);return r.text();});
+    return Promise.resolve(f.content||"");
+  }
+  function parseObj(t){try{var c=t?JSON.parse(t):{};return (c&&typeof c==="object")?c:{};}catch(e){return {};}}
   function readGist(){
     return fetch("https://api.github.com/gists/"+SYNC.gist,{headers:ghHeaders(),cache:"no-store"})
       .then(function(r){if(!r.ok)throw new Error("read "+r.status);return r.json();})
-      .then(function(j){var f=j.files&&j.files[GIST_FILE];
-        // the API truncates file content above ~1 MB; fetch the raw file instead
-        if(f&&f.truncated&&f.raw_url)return fetch(f.raw_url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("raw "+r.status);return r.text();});
-        return f&&f.content?f.content:"";})
-      .then(function(txt){var c=txt?JSON.parse(txt):{};
-        GIST_RAW=(c&&typeof c==="object")?c:{};
+      .then(function(j){var fs=j.files||{};return Promise.all([fileText(fs[GIST_FILE]),fileText(fs[PROF_FILE])]);})
+      .then(function(t){
+        var c=parseObj(t[0]);GIST_RAW=c;PROF_RAW=parseObj(t[1]);
+        // early test builds kept profiles inside the board file: carry them over once
+        if(!PROF_RAW.profiles&&c.profiles&&typeof c.profiles==="object")PROF_RAW.profiles=c.profiles;
         return {board:c.board||{},goal:+c.goal||0,goalTs:+c.goalTs||0,goalHistory:Array.isArray(c.goalHistory)?c.goalHistory:[]};});
   }
   function writeGist(board){
     var g=localGoal(),body={files:{}},out={};
-    Object.keys(GIST_RAW).forEach(function(k){out[k]=GIST_RAW[k];});
+    Object.keys(GIST_RAW).forEach(function(k){if(k!=="profiles")out[k]=GIST_RAW[k];});
     out.app="winter-arc-challenge";out.board=board;out.goal=g.goal;out.goalTs=g.ts;out.goalHistory=GOAL_HIST;
-    if(MY_PROFILE){var ps={},src=(out.profiles&&typeof out.profiles==="object")?out.profiles:{};
-      Object.keys(src).forEach(function(n){ps[n]=src[n];});ps[SYNC.name||"You"]=MY_PROFILE;out.profiles=ps;}
     body.files[GIST_FILE]={content:JSON.stringify(out)};
+    if(MY_PROFILE){
+      var po={},ps={},src=(PROF_RAW.profiles&&typeof PROF_RAW.profiles==="object")?PROF_RAW.profiles:{};
+      Object.keys(PROF_RAW).forEach(function(k){po[k]=PROF_RAW[k];});
+      Object.keys(src).forEach(function(n){ps[n]=src[n];});ps[SYNC.name||"You"]=MY_PROFILE;
+      po.app="winter-arc-profiles";po.profiles=ps;
+      body.files[PROF_FILE]={content:JSON.stringify(po)};
+    }
     return fetch("https://api.github.com/gists/"+SYNC.gist,{method:"PATCH",headers:ghHeaders(),body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)throw new Error("write "+r.status);return r.json();});
   }
@@ -964,10 +979,10 @@
     return {profile:out,changed:changed};
   }
   // newer goal wins (whoever changed it last), then merge boards and push my column
-  function syncOnce(){
+  function syncCore(){
     return readGist().then(function(r){
       // account profile first: pulls my plan/logs/days from the gist (new phone, second device)
-      var me=SYNC.name||"You",profiles=(GIST_RAW.profiles&&typeof GIST_RAW.profiles==="object")?GIST_RAW.profiles:{};
+      var me=SYNC.name||"You",profiles=(PROF_RAW.profiles&&typeof PROF_RAW.profiles==="object")?PROF_RAW.profiles:{};
       var pm=mergeProfile(profiles[me]);
       MY_PROFILE=pm.profile;
       // goals: union of both histories; a newer goal from an old-version phone becomes an entry
@@ -987,6 +1002,14 @@
       else{if($("p-meals").hidden===false){renderMeals();}renderChallenge();}
       return writeGist(merged);
     });
+  }
+  // one sync at a time: a call during a running sync is folded into one follow-up run
+  var SYNC_RUN=null,SYNC_AGAIN=false;
+  function syncOnce(){
+    if(SYNC_RUN){SYNC_AGAIN=true;return SYNC_RUN;}
+    SYNC_RUN=syncCore().then(function(v){SYNC_RUN=null;if(SYNC_AGAIN){SYNC_AGAIN=false;return syncOnce();}return v;},
+      function(e){SYNC_RUN=null;SYNC_AGAIN=false;throw e;});
+    return SYNC_RUN;
   }
   function pullSync(){
     if(!SYNC.on)return;syncFlash("Syncing…");
