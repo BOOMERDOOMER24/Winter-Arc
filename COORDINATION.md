@@ -18,14 +18,22 @@ Read this after every `git pull`. Keep it short and current, and delete entries 
   board: { <name>: { "YYYY-MM-DD": kcal | true } },
   goal: <current kcal>,              // kept for older clients
   goalTs: <ms of newest goal change>,
-  goalHistory: [ { from: "YYYY-MM-DD", kcal, ts } ]   // since PR #1
+  goalHistory: [ { from: "YYYY-MM-DD", kcal, ts } ],  // since PR #1
+  profiles: { <name>: {                                // since PR #6: each person's account
+    v: 1, ts,
+    sec:  { "<localStorage key>": { v, ts } },         // wa-profile, wa-mymeals, wa-weights, wa-lifts,
+                                                       // wa-liftnames, wa-shop, wa-recent, wa-rot
+    days: { "YYYY-MM-DD": { v: <wa-meals day>, ts } }
+  } }
 }
 ```
+**Account sync (PR #6):** a device only writes `profiles[myName]`. Per section and per day, newest `ts` wins (local `wa-sects-ts` / `wa-meals-ts`). Data applied from the gist is written with `LS.raw` (no new timestamp); every app edit goes through `LS.set`, which stamps it.
+
 **Main invariant, don't break it:** on every sync, days missing from local `wa-meals` are first restored from `board[myName]` in the gist; then `board[myName]` is rebuilt from that phone's own `wa-meals`. Other people's columns are taken from the gist unchanged.
 
 ## In progress
-- Finn's Claude: goal history, [PR #1](https://github.com/BOOMERDOOMER24/Winter-Arc/pull/1), approved, waiting to merge
-- Next: Thom's Claude takes the nits from PR #1 review (lists itself here before starting)
+- Finn's Claude: account sync (`profiles` in the gist), PR #6. **`index.html` locked** until it's merged or closed.
+- Queued: refactor/split (Finn's Claude), people list (#5), nits from #1/#4 reviews, FIT import.
 
 ## Open ideas / questions
 - Challenge window is hard-coded `CH_START` 2026-11-30 → `CH_END` 2027-02-28. Finn would like it open-ended ("as long as we want"); Finn and Thom to decide.
