@@ -180,6 +180,8 @@
   .vs .p .who{font-family:var(--disp);font-weight:600;font-size:14px}
   .vs .p .sc{font-family:var(--mono);font-weight:600;font-size:24px;color:var(--accent);margin-top:3px}
   .vs .p .sl{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+  .vs .p{appearance:none;font:inherit;color:inherit;cursor:pointer}
+  .vs .p.sel{outline:2px solid var(--accent);outline-offset:-1px}
   .vs .p.lead{border-color:var(--good)} .vs .p.lead .sc{color:var(--good)}
   textarea.ta{width:100%;padding:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:9px;font-family:var(--mono);font-size:13px}
   .synced{font-family:var(--mono);font-size:11px;color:var(--good)}
@@ -199,7 +201,7 @@
 
 <header>
   <div class="head-in">
-    <div class="brand"><h1>Winter&nbsp;Arc</h1><span class="goal">65 → 75 kg</span></div>
+    <div class="brand"><h1>Winter&nbsp;Arc</h1><span class="goal" id="hdrGoal"></span></div>
     <div class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" id="t-today" role="tab" aria-controls="p-today" aria-selected="true">Today</button>
       <button class="tab" id="t-train" role="tab" aria-controls="p-train" aria-selected="false">Train</button>
@@ -214,20 +216,17 @@
 <main>
   <!-- ===================== TODAY ===================== -->
   <section id="p-today" class="panel" role="tabpanel" aria-labelledby="t-today">
-    <div class="banner" id="lunchBanner"></div>
+    <div class="banner" id="noteBanner" hidden></div>
+    <div class="hint" id="setupHint" hidden><b>Welcome!</b> This app is yours — set your goal weight in <b>Stats → My profile</b>, your split in <b>Train</b>, and your meals in <b>Meals</b>. Only the calorie challenge is shared.</div>
 
     <div class="big">
       <div class="t"><div class="k">Bodyweight</div><div class="v" id="dashW">—</div><div class="d" id="dashWd">no entry yet</div></div>
-      <div class="t"><div class="k">To goal</div><div class="v" id="dashGoal">—</div><div class="d">target 75 kg</div></div>
+      <div class="t"><div class="k">To goal</div><div class="v" id="dashGoal">—</div><div class="d" id="dashGoalSub">set a goal in Stats</div></div>
     </div>
 
     <p class="eyebrow">Next workout</p>
     <div class="card pad">
-      <div class="pills" id="dayPills">
-        <button class="pill" data-day="0">Day 1</button>
-        <button class="pill" data-day="1">Day 2</button>
-        <button class="pill" data-day="2">Day 3</button>
-      </div>
+      <div class="pills" id="dayPills"></div>
       <h3 id="nextTitle" style="margin:12px 0 2px"></h3>
       <p class="sub" id="nextList"></p>
       <div class="field" style="margin-top:8px">
@@ -237,74 +236,30 @@
     </div>
   </section>
 
-  <!-- ===================== TRAIN ===================== -->
+  <!-- ===================== TRAIN (personal) ===================== -->
   <section id="p-train" class="panel" role="tabpanel" aria-labelledby="t-train" hidden>
-    <div class="hint"><b>Every working set:</b> 6–10 reps (3–6 on strength lifts), last set 0–2 from failure. 3 sets on mains, 2 on the rest. ~60–75 min. ~1 rest day between.</div>
-
-    <div class="card">
-      <h3><span class="daytag">DAY 1</span> Lower + Judo</h3>
-      <p class="sub">Legs + judo S&amp;C: hip power, posterior chain, grip. Dips here — triceps fresh.</p>
-      <div class="row"><span class="nm">Trap-bar Deadlift</span><span class="rx">3 × 5–6</span><span class="note">Posterior chain, grip, throw power</span></div>
-      <div class="row"><span class="nm">Leg Press / Smith Squat</span><span class="rx">3 × 8–10</span></div>
-      <div class="row"><span class="nm">Seated Leg Curl</span><span class="rx">3 × 8–10</span></div>
-      <div class="row"><span class="nm">Standing Calf Raise</span><span class="rx">2 × 10–12</span></div>
-      <div class="row hero"><span class="nm">Weighted Dips</span><span class="rx">3 × 6–8</span><span class="note">Fresh triceps → actually loadable. +plate at 8.</span></div>
-      <div class="row"><span class="nm">Farmer's Carry / Plate Pinch</span><span class="rx">2–3 sets</span><span class="note">Grip last. Optional: KB swing 3×8</span></div>
-    </div>
-
-    <div class="card">
-      <h3><span class="daytag">DAY 2</span> Push</h3>
-      <p class="sub">Chest · shoulders · triceps. Heavy fresh, cables shape at the end.</p>
-      <div class="row hero"><span class="nm">Flat Bench Press</span><span class="rx">3 × 3–5</span><span class="note">Strength benchmark, for reps. Spotter days. True max ~every 6 wks.</span></div>
-      <div class="row hero"><span class="nm">Incline Press (Smith/DB)</span><span class="rx">3 × 6–8</span><span class="note">Main volume press + triceps. Solo-safe, every week.</span></div>
-      <div class="row"><span class="nm">Seated Shoulder Press</span><span class="rx">2 × 6–10</span><span class="note">Trimmed — incline hits front delts</span></div>
-      <div class="row"><span class="nm">Lateral Raise</span><span class="rx">3 × 10–12</span><span class="note">Side delts — what pressing misses</span></div>
-      <div class="row"><span class="nm">Overhead Triceps Ext. (cable)</span><span class="rx">3 × 8–10</span><span class="note">Long head — best isolation</span></div>
-      <div class="row"><span class="nm">Triceps Pushdown</span><span class="rx">2 × 8–10</span><span class="note">Lateral/medial · optional</span></div>
-    </div>
-
-    <div class="card">
-      <h3><span class="daytag">DAY 3</span> Pull</h3>
-      <p class="sub">Back · biceps.</p>
-      <div class="row"><span class="nm">Lat Pulldown</span><span class="rx">3 × 6–10</span></div>
-      <div class="row"><span class="nm">Seated Row / Iso-Lateral Row</span><span class="rx">3 × 8–10</span></div>
-      <div class="row"><span class="nm">Rear Delt Fly</span><span class="rx">2–3 × 10–12</span></div>
-      <div class="row"><span class="nm">Preacher Curl</span><span class="rx">3 × 6–10</span></div>
-      <div class="row"><span class="nm">Hammer Curl (cable)</span><span class="rx">2 × 8–10</span><span class="note">Brachialis + forearm → grip</span></div>
+    <div id="trainView"></div>
+    <div class="field" style="margin:4px 0 12px"><button class="btn ghost" id="trEdit">Edit my split</button></div>
+    <div id="trEditor" hidden>
+      <div class="hint">One card per training day. Sets × reps go in the second box (e.g. <span class="mono">3 × 6–8</span>), notes are optional.</div>
+      <div id="trDays"></div>
+      <div class="field" style="margin-top:4px"><button class="btn ghost" id="trAddDay">+ Add day</button><button class="btn" id="trSave">Save split</button><button class="btn ghost" id="trCancel">Cancel</button></div>
     </div>
   </section>
 
-  <!-- ===================== EAT ===================== -->
+  <!-- ===================== EAT (personal) ===================== -->
   <section id="p-eat" class="panel" role="tabpanel" aria-labelledby="t-eat" hidden>
     <div class="stat">
-      <div><div class="n">2,800–3k</div><div class="l">kcal / day</div></div>
-      <div><div class="n">~150 g</div><div class="l">protein</div></div>
-      <div><div class="n">~€190</div><div class="l">per month</div></div>
+      <div><div class="n" id="eatKcal">—</div><div class="l">kcal planned</div></div>
+      <div><div class="n" id="eatGoal">—</div><div class="l">shared target</div></div>
     </div>
-
-    <p class="eyebrow">Repeatable day</p>
-    <div class="card">
-      <div class="meal"><div class="mh"><b>Breakfast</b><span class="kc">~950 kcal · 30g P</span></div><p>Cereal + Haferflocken, 250g full-fat yoghurt, banana + nuts + honey, glass of whole milk.</p></div>
-      <div class="meal"><div class="mh"><b>Lunch</b><span class="kc">~750 kcal · 30g P</span></div>
-        <div class="split"><b>Uni days</b><p style="margin-top:2px">Mensa — biggest protein dish, take the carb side + bread.</p></div>
-        <div class="split" style="margin-top:7px"><b>Tue + weekends</b><p style="margin-top:2px">No mensa → make a 2nd dinner-rotation meal (quark bowl / eggs).</p></div>
-      </div>
-      <div class="meal"><div class="mh"><b>Shake</b><span class="kc">~320 kcal · 34g P</span></div><p>1 scoop in 300ml whole milk — milk, not water.</p></div>
-      <div class="meal"><div class="mh"><b>Snack</b><span class="kc">~300 kcal</span></div><p>Banana + nuts, or cheese on dark bread. Skip if full.</p></div>
-    </div>
-
-    <p class="eyebrow">Dinner — pick one</p>
-    <div class="card">
-      <div class="row"><span class="nm">Tuna pasta</span><span class="rx">680 · 48g</span><span class="note">Pasta + jar sauce + 1 can tuna + cheese</span></div>
-      <div class="row hero"><span class="nm">Quark bowl ★</span><span class="rx">700 · 60g</span><span class="note">500g quark + oats + banana + honey + nuts. Cheapest, no cooking.</span></div>
-      <div class="row"><span class="nm">Egg scramble</span><span class="rx">650 · 35g</span><span class="note">4 eggs + cheese on dark bread</span></div>
-      <div class="row"><span class="nm">Lentil / rice bowl</span><span class="rx">700 · 30g</span><span class="note">Rice + lentils or 2 eggs + frozen veg + olive oil</span></div>
-    </div>
-
-    <p class="eyebrow">Protein powder · if short</p>
-    <div class="card">
-      <div class="meal"><p style="margin-top:0"><b style="color:var(--ink)">Default</b> — scoop in milk. <b style="color:var(--ink)">Backup</b> — scoop into oats/yoghurt when quark's out. <b style="color:var(--ink)">Stall?</b> Add a 2nd shake.</p></div>
-      <div class="meal"><p>Day short? In order: extra glass of milk → 2nd shake → extra tub of quark.</p></div>
+    <p class="eyebrow">My daily meals</p>
+    <div class="card" id="eatMeals"></div>
+    <p class="sub" style="margin:-4px 0 12px">Edit these in <b>Meals → Edit my meals</b>.</p>
+    <p class="eyebrow">My food notes</p>
+    <div class="card pad">
+      <textarea class="ta" id="eatNotes" rows="6" placeholder="Dinner rotation, tips, what to do on short days…" aria-label="Food notes" style="font-family:var(--body);font-size:14px"></textarea>
+      <p class="sub" id="eatSaved" style="margin-top:4px;min-height:16px;font-size:12px"></p>
     </div>
   </section>
 
@@ -340,10 +295,10 @@
       <div id="xList" style="margin-top:6px"></div>
     </div>
 
-    <p class="eyebrow">Challenge · the crew</p>
+    <p class="eyebrow">Challenge · everyone's progress</p>
     <div class="vs" id="vsBox"></div>
     <div class="card pad">
-      <div class="callegend"><span><b>■</b> hit <span id="lgGoal">3000</span></span><span><b>·</b> missed / pending</span><span>outline = today</span></div>
+      <div class="callegend"><span><b>■</b> hit <span id="lgGoal">3000</span></span><span><b>·</b> missed / pending</span><span>numbers = kcal (k)</span><span>outline = today</span></div>
       <div class="cal" id="calGrid"></div>
       <p class="sub" style="margin-top:4px" id="calSub"></p>
     </div>
@@ -377,24 +332,32 @@
 
   <!-- ===================== SHOP ===================== -->
   <section id="p-shop" class="panel" role="tabpanel" aria-labelledby="t-shop" hidden>
-    <p class="eyebrow">Where — from Taufkirchen station</p>
-    <div class="card">
-      <div class="store"><span class="when">Weekly</span><div><b>Lidl</b> · ~7 min walk<p>Main perishable shop.</p></div></div>
-      <div class="store"><span class="when">Top-up</span><div><b>Norma / Penny</b> · 2–3 min<p>Mid-week: milk, quark, bananas, bread.</p></div></div>
-      <div class="store"><span class="when m">Monthly</span><div><b>Aldi</b> · 2.3 km<p>Bulk dry goods + protein powder. Cheapest.</p></div></div>
+    <div class="listhead"><p class="eyebrow">My shopping list</p><button class="reset" id="shUncheck">uncheck all</button></div>
+    <div class="card" id="shList"></div>
+    <div class="card pad">
+      <div class="xrow">
+        <input type="text" class="tx" id="shName" placeholder="Item, e.g. Milk 6×1L" aria-label="Item">
+        <input type="text" class="tx" id="shPr" placeholder="€" aria-label="Price (optional)" style="flex:none;width:80px">
+        <button class="btn" id="shAdd">Add</button>
+      </div>
     </div>
-
-    <div class="listhead"><p class="eyebrow">Weekly — Lidl</p><button class="reset" data-reset="wk">uncheck</button></div>
-    <div class="card" id="wkList"></div>
-
-    <div class="listhead"><p class="eyebrow">Monthly — Aldi</p><button class="reset" data-reset="mo">uncheck</button></div>
-    <div class="card" id="moList"></div>
-    <div class="hint" style="margin-top:2px">Levers already in: seeds over nuts, dried lentils over canned, tuna dialled back, bulk at Aldi. Don't cut milk or powder.</div>
   </section>
 
   <!-- ===================== STATS ===================== -->
   <section id="p-stats" class="panel" role="tabpanel" aria-labelledby="t-stats" hidden>
-    <p class="eyebrow">Bodyweight → 75 kg</p>
+    <p class="eyebrow">My profile</p>
+    <div class="card pad">
+      <div class="field col">
+        <label class="fl" for="pfGoal">Goal bodyweight (kg)</label>
+        <input type="number" id="pfGoal" inputmode="decimal" step="0.5" min="30" max="200" placeholder="e.g. 75">
+        <label class="fl" for="pfNote" style="margin-top:6px">Pinned note on Today (optional)</label>
+        <input type="text" class="tx" id="pfNote" placeholder="e.g. Mensa days: biggest protein dish">
+      </div>
+      <div class="field" style="margin-top:8px"><button class="btn" id="pfSave">Save</button></div>
+      <p id="pfMsg" class="sub" role="status" aria-live="polite" style="min-height:16px;margin-top:4px;font-size:12px"></p>
+    </div>
+
+    <p class="eyebrow" id="wTitle">Bodyweight</p>
     <div class="card pad">
       <div id="wChartWrap"></div>
       <div class="field" style="margin-top:10px">
@@ -407,14 +370,7 @@
     <p class="eyebrow">Lift tracker</p>
     <div class="card pad">
       <div class="field col">
-        <select id="liftSel" aria-label="Lift">
-          <option value="bench">Flat Bench</option>
-          <option value="incline">Incline Press</option>
-          <option value="dips">Weighted Dips</option>
-          <option value="trap">Trap-bar Deadlift</option>
-          <option value="ohext">Overhead Triceps Ext.</option>
-          <option value="pulldown">Lat Pulldown</option>
-        </select>
+        <select id="liftSel" aria-label="Lift"></select>
         <div class="field">
           <input type="number" id="liftW" inputmode="decimal" step="0.5" min="0" placeholder="kg" aria-label="Weight">
           <input type="number" id="liftR" inputmode="numeric" step="1" min="1" max="30" placeholder="reps" aria-label="Reps">
@@ -427,7 +383,7 @@
 
     <p class="eyebrow">Backup &amp; revisit</p>
     <div class="card pad">
-      <p class="sub" style="margin-top:0">Your logs live only on this device. Copy them to back up, move phones, or paste into our chat so we can revisit your progress together.</p>
+      <p class="sub" style="margin-top:0">Your plan and logs live only on this phone. Copy them to back up or move to a new phone.</p>
       <div class="field"><button class="btn" id="expBtn">Copy my data</button><button class="btn ghost" id="impToggle">Restore…</button></div>
       <div id="impWrap" hidden style="margin-top:8px">
         <textarea id="impText" rows="3" placeholder="Paste a backup here" aria-label="Paste backup data" style="width:100%;padding:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:9px;font-family:var(--mono);font-size:12px"></textarea>
@@ -437,7 +393,7 @@
     </div>
   </section>
 
-  <p class="foot">Winter Arc · built from your log &amp; goal<br>Entries save on this device only.</p>
+  <p class="foot">Winter Arc · your plan stays on this phone<br>Only daily kcal totals are shared with the group.</p>
 </main>
 
 <script>
@@ -457,167 +413,245 @@
     LS.set("wa-tab",key);
     if(key==="today")renderToday();
     if(key==="meals"){renderMeals();renderChallenge();if(SYNC.on)pullSync();}
-    if(key==="stats"){renderWeight();renderLifts();}
+    if(key==="train")renderTrain();
+    if(key==="eat")renderEat();
+    if(key==="shop")renderShop();
+    if(key==="stats"){renderProfile();fillLiftSel();renderWeight();renderLifts();}
   }
   tabs.forEach(function(t){$(t[0]).addEventListener("click",function(){show(t[2]);try{history.replaceState(null,"","#"+t[2]);}catch(e){location.hash=t[2];}window.scrollTo({top:0});});});
 
+  /* ====================================================
+     PERSONAL PROFILE — everything here lives on this phone only
+     wa-profile = {goalKg, note, split:[{t, ex:[{nm,rx,note}]}], eatNotes, shop:[{id,nm,pr}]}
+     ==================================================== */
+  function prof(){var p=LS.get("wa-profile",null);if(!p||typeof p!=="object")p={};
+    if(!Array.isArray(p.split))p.split=[];if(!Array.isArray(p.shop))p.shop=[];return p;}
+  function saveProf(p){LS.set("wa-profile",p);}
+  function renderHeader(){var p=prof(),ws=LS.get("wa-weights",[]);
+    var start=ws.length?ws[0].w:null;
+    $("hdrGoal").textContent=p.goalKg?((start?Math.round(start)+" → ":"→ ")+p.goalKg+" kg"):"";
+  }
+
   /* ---------- TODAY ---------- */
-  var DAYS=[
-    {t:"Day 1 — Lower + Judo",l:"Trap-bar DL · Leg press · Leg curl · Calf · Dips · Carries"},
-    {t:"Day 2 — Push",l:"Flat bench · Incline press · Shoulder press · Lat raise · Triceps"},
-    {t:"Day 3 — Pull",l:"Lat pulldown · Row · Rear delt · Preacher · Hammer curl"}
-  ];
-  function nextDay(){var n=LS.get("wa-rot",0);return (n%3+3)%3;}
+  function nextDay(){var n=prof().split.length||1;var r=+LS.get("wa-rot",0)||0;return ((r%n)+n)%n;}
   function renderToday(){
-    // lunch banner
-    var wd=new Date().getDay(); // 0 Sun..6 Sat
-    var uni=(wd===1||wd===3||wd===4||wd===5);
-    var b=$("lunchBanner");
-    b.className="banner"+(uni?"":" fuel");
-    b.innerHTML=uni
-      ? '<span>🍽️</span><span><b>Mensa day.</b> Grab the biggest protein dish, take the carb side + bread.</span>'
-      : '<span>🍳</span><span><b>No mensa today.</b> Cook a dinner-rotation meal at lunch too — quark bowl or eggs.</span>';
-    // weight tiles
+    var p=prof();renderHeader();
+    var nb=$("noteBanner");nb.hidden=!p.note;if(p.note)nb.innerHTML='<span>📌</span><span>'+esc(p.note)+'</span>';
+    $("setupHint").hidden=!!(p.goalKg||p.split.length);
     var ws=LS.get("wa-weights",[]);
     if(ws.length){
-      var cur=ws[ws.length-1].w;
+      var cur=ws[ws.length-1].w,dlt=cur-ws[0].w;
       $("dashW").textContent=cur.toFixed(1);
-      var start=ws.length>1?ws[0].w:cur;
-      var dlt=cur-start;
       $("dashWd").innerHTML=(dlt>=0?'<span class="up">▲ +':'<span class="down">▼ ')+dlt.toFixed(1)+" kg</span> since start";
-      $("dashGoal").textContent="+"+(75-cur).toFixed(1);
-    }else{$("dashW").textContent="—";$("dashWd").textContent="log it in Stats";$("dashGoal").textContent="+10";}
-    // next workout
+    }else{$("dashW").textContent="—";$("dashWd").textContent="log it in Stats";}
+    if(p.goalKg){
+      $("dashGoalSub").textContent="target "+p.goalKg+" kg";
+      $("dashGoal").textContent=ws.length?((p.goalKg-ws[ws.length-1].w>=0?"+":"")+(p.goalKg-ws[ws.length-1].w).toFixed(1)):"—";
+    }else{$("dashGoal").textContent="—";$("dashGoalSub").textContent="set a goal in Stats";}
+    var pills=$("dayPills");pills.innerHTML="";
+    if(!p.split.length){$("nextTitle").textContent="No split yet";$("nextList").textContent="Add your training days in the Train tab.";$("doneBtn").hidden=true;return;}
+    $("doneBtn").hidden=false;
     var nd=nextDay();
-    $("nextTitle").textContent=DAYS[nd].t;
-    $("nextList").textContent=DAYS[nd].l;
-    Array.prototype.forEach.call(document.querySelectorAll("#dayPills .pill"),function(p){
-      p.setAttribute("aria-pressed",(+p.dataset.day===nd)?"true":"false");
-    });
+    p.split.forEach(function(d,i){var b=document.createElement("button");b.className="pill";b.textContent="Day "+(i+1);
+      b.setAttribute("aria-pressed",i===nd?"true":"false");
+      b.addEventListener("click",function(){LS.set("wa-rot",i);renderToday();});pills.appendChild(b);});
+    $("nextTitle").textContent=p.split[nd].t||("Day "+(nd+1));
+    $("nextList").textContent=p.split[nd].ex.map(function(e){return e.nm;}).join(" · ")||"No exercises yet";
   }
-  Array.prototype.forEach.call(document.querySelectorAll("#dayPills .pill"),function(p){
-    p.addEventListener("click",function(){LS.set("wa-rot",+p.dataset.day);renderToday();});
-  });
-  $("doneBtn").addEventListener("click",function(){LS.set("wa-rot",(nextDay()+1)%3);renderToday();});
+  $("doneBtn").addEventListener("click",function(){LS.set("wa-rot",nextDay()+1);renderToday();});
   $("toTrain").addEventListener("click",function(){show("train");try{history.replaceState(null,"","#train");}catch(e){}window.scrollTo({top:0});});
 
-  /* ---------- SHOPPING ---------- */
-  var WK=[["m1","Whole milk — 6 × 1L","€6.60",0],["m2","Magerquark — 5 × 500g","€5.00",1],["m3","Eggs — 20","€4.00",0],["m4","Full-fat yoghurt — 1kg","€1.80",0],["m5","Bananas — ~1.5kg","€2.20",0],["m6","Block cheese","€2.50",0],["m7","Dark bread","€1.50",0],["m8","Frozen veg","€1.50",0],["m9","Jar sauce + fresh bits","€2.00",0]];
-  var MO=[["o1","Oats — 1kg","€0.90",0],["o2","Rice — 2kg","€2.50",0],["o3","Pasta — 2kg","€2.00",0],["o4","Cereal — 2 boxes","€3.00",0],["o5","Dried lentils — 1kg","€2.00",0],["o6","Canned tuna — 6","€5.00",0],["o7","Sunflower seeds / nuts","€4.00",0],["o8","Honey · olive oil · butter","€6.00",0],["o9","Protein powder — 2.5kg tub","€22 /2mo",0]];
-  function buildList(el,items,totLabel,totVal,store){
-    var checked=LS.get("wa-shop",{});
-    var ul=document.createElement("ul");ul.className="buy";
-    items.forEach(function(it){
-      var li=document.createElement("li");
-      var lab=document.createElement("label");
-      var cb=document.createElement("input");cb.type="checkbox";cb.id="cb-"+it[0];cb.checked=!!checked[it[0]];
-      cb.addEventListener("change",function(){var c=LS.get("wa-shop",{});c[it[0]]=cb.checked;LS.set("wa-shop",c);});
-      var tx=document.createElement("span");tx.className="txt";tx.innerHTML=it[1]+(it[3]?' <span class="star">★</span>':"");
-      var pr=document.createElement("span");pr.className="pr";pr.textContent=it[2];
-      lab.appendChild(cb);lab.appendChild(tx);lab.appendChild(pr);li.appendChild(lab);ul.appendChild(li);
+  /* ---------- TRAIN ---------- */
+  function renderTrain(){
+    var p=prof(),v=$("trainView");v.innerHTML="";
+    if(!p.split.length){v.innerHTML='<div class="hint">No training split yet. Tap <b>Edit my split</b> to add your days and exercises.</div>';return;}
+    p.split.forEach(function(d,i){
+      var c=document.createElement("div");c.className="card";
+      var h='<h3><span class="daytag">DAY '+(i+1)+'</span> '+esc(d.t||"")+'</h3>';
+      d.ex.forEach(function(e){h+='<div class="row"><span class="nm">'+esc(e.nm)+'</span>'+(e.rx?'<span class="rx">'+esc(e.rx)+'</span>':'')+(e.note?'<span class="note">'+esc(e.note)+'</span>':'')+'</div>';});
+      c.innerHTML=h;v.appendChild(c);
     });
-    el.innerHTML="";el.appendChild(ul);
-    var tot=document.createElement("div");tot.className="tot";
-    tot.innerHTML="<span>"+totLabel+"</span><span>"+totVal+"</span>";el.appendChild(tot);
   }
+  var trDraft=[];
+  function renderTrEditor(){
+    var box=$("trDays");box.innerHTML="";
+    trDraft.forEach(function(d,i){
+      var c=document.createElement("div");c.className="card pad";
+      c.innerHTML='<div class="xrow"><input type="text" class="tx" aria-label="Day name" placeholder="Day '+(i+1)+' name, e.g. Push"><button class="del" aria-label="Remove day">×</button></div><div class="exs"></div><button class="btn ghost" style="margin-top:8px">+ Exercise</button>';
+      var nm=c.querySelector("input");nm.value=d.t||"";nm.addEventListener("input",function(){d.t=nm.value;});
+      c.querySelector(".del").addEventListener("click",function(){trDraft.splice(i,1);renderTrEditor();});
+      var exs=c.querySelector(".exs");
+      d.ex.forEach(function(e,j){
+        var r=document.createElement("div");r.className="ed";
+        r.innerHTML='<div class="xrow"><input type="text" class="tx" placeholder="Exercise" aria-label="Exercise"><input type="text" class="tx" placeholder="3 × 8–10" aria-label="Sets × reps" style="flex:none;width:100px"><button class="del" aria-label="Remove exercise">×</button></div><input type="text" class="tx" placeholder="Note (optional)" aria-label="Note" style="font-size:13px;padding:8px 12px">';
+        var ins=r.querySelectorAll("input");ins[0].value=e.nm||"";ins[1].value=e.rx||"";ins[2].value=e.note||"";
+        ins[0].addEventListener("input",function(){e.nm=ins[0].value;});
+        ins[1].addEventListener("input",function(){e.rx=ins[1].value;});
+        ins[2].addEventListener("input",function(){e.note=ins[2].value;});
+        r.querySelector(".del").addEventListener("click",function(){d.ex.splice(j,1);renderTrEditor();});
+        exs.appendChild(r);
+      });
+      c.querySelector(".btn").addEventListener("click",function(){d.ex.push({nm:"",rx:"",note:""});renderTrEditor();});
+      box.appendChild(c);
+    });
+  }
+  $("trEdit").addEventListener("click",function(){trDraft=JSON.parse(JSON.stringify(prof().split));if(!trDraft.length)trDraft.push({t:"",ex:[{nm:"",rx:"",note:""}]});
+    $("trEditor").hidden=false;$("trainView").hidden=true;$("trEdit").hidden=true;renderTrEditor();});
+  function closeTr(){$("trEditor").hidden=true;$("trainView").hidden=false;$("trEdit").hidden=false;renderTrain();}
+  $("trAddDay").addEventListener("click",function(){trDraft.push({t:"",ex:[{nm:"",rx:"",note:""}]});renderTrEditor();});
+  $("trCancel").addEventListener("click",closeTr);
+  $("trSave").addEventListener("click",function(){
+    var p=prof();
+    p.split=trDraft.map(function(d){return {t:(d.t||"").trim(),ex:d.ex.filter(function(e){return (e.nm||"").trim();}).map(function(e){return {nm:e.nm.trim(),rx:(e.rx||"").trim(),note:(e.note||"").trim()};})};})
+      .filter(function(d){return d.t||d.ex.length;});
+    saveProf(p);closeTr();
+  });
+
+  /* ---------- EAT ---------- */
+  function renderEat(){
+    var ms=myMeals(),tot=0,el=$("eatMeals");el.innerHTML="";
+    ms.forEach(function(m){tot+=m.kc;var d=document.createElement("div");d.className="meal";
+      d.innerHTML='<div class="mh"><b>'+esc(m.nm)+'</b><span class="kc">'+m.kc+' kcal</span></div>'+(m.ds?'<p>'+esc(m.ds)+'</p>':'');el.appendChild(d);});
+    $("eatKcal").textContent=tot.toLocaleString();$("eatGoal").textContent=GOAL.toLocaleString();
+    $("eatNotes").value=prof().eatNotes||"";$("eatSaved").textContent="";
+  }
+  var eatT=null;
+  $("eatNotes").addEventListener("input",function(){clearTimeout(eatT);eatT=setTimeout(function(){var p=prof();p.eatNotes=$("eatNotes").value;saveProf(p);$("eatSaved").textContent="Saved ✓";},500);});
+
+  /* ---------- SHOP ---------- */
   function renderShop(){
-    buildList($("wkList"),WK,"Perishables","~€27 / wk");
-    buildList($("moList"),MO,"+ mensa ~€15/wk","≈ €190 / mo");
-  }
-  Array.prototype.forEach.call(document.querySelectorAll("[data-reset]"),function(btn){
-    btn.addEventListener("click",function(){
-      var items=btn.dataset.reset==="wk"?WK:MO;var c=LS.get("wa-shop",{});
-      items.forEach(function(it){c[it[0]]=false;});LS.set("wa-shop",c);renderShop();
+    var p=prof(),checked=LS.get("wa-shop",{}),el=$("shList");el.innerHTML="";
+    if(!p.shop.length){el.innerHTML='<p class="empty">Your list is empty — add items below.</p>';return;}
+    var ul=document.createElement("ul");ul.className="buy";
+    p.shop.forEach(function(it,i){
+      var li=document.createElement("li"),lab=document.createElement("label");
+      var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!checked[it.id];
+      cb.addEventListener("change",function(){var c=LS.get("wa-shop",{});c[it.id]=cb.checked;LS.set("wa-shop",c);});
+      var tx=document.createElement("span");tx.className="txt";tx.textContent=it.nm;
+      var pr=document.createElement("span");pr.className="pr";pr.textContent=it.pr||"";
+      var del=document.createElement("button");del.className="del";del.setAttribute("aria-label","Remove "+it.nm);del.textContent="×";
+      del.addEventListener("click",function(ev){ev.preventDefault();var q=prof();q.shop.splice(i,1);saveProf(q);renderShop();});
+      lab.appendChild(cb);lab.appendChild(tx);lab.appendChild(pr);lab.appendChild(del);li.appendChild(lab);ul.appendChild(li);
     });
+    el.appendChild(ul);
+  }
+  $("shAdd").addEventListener("click",function(){
+    var nm=$("shName").value.trim();if(!nm){$("shName").focus();return;}
+    var p=prof();p.shop.push({id:"s"+Date.now().toString(36),nm:nm,pr:$("shPr").value.trim()});saveProf(p);
+    $("shName").value="";$("shPr").value="";renderShop();
+  });
+  $("shUncheck").addEventListener("click",function(){LS.set("wa-shop",{});renderShop();});
+
+  /* ---------- PROFILE (in Stats) ---------- */
+  function renderProfile(){var p=prof();$("pfGoal").value=p.goalKg||"";$("pfNote").value=p.note||"";
+    $("wTitle").textContent="Bodyweight"+(p.goalKg?" → "+p.goalKg+" kg":"");}
+  $("pfSave").addEventListener("click",function(){
+    var p=prof(),g=parseFloat($("pfGoal").value);
+    p.goalKg=(!isNaN(g)&&g>=30&&g<=200)?g:null;p.note=$("pfNote").value.trim();saveProf(p);
+    renderProfile();renderHeader();renderWeight();$("pfMsg").textContent="Saved ✓";
   });
 
   /* ---------- BODYWEIGHT ---------- */
   function renderWeight(){
-    var ws=LS.get("wa-weights",[]);
-    // chart
+    var ws=LS.get("wa-weights",[]),goal=prof().goalKg;
     var wrap=$("wChartWrap");
-    var W=320,H=120,pad=6,lo=62,hi=77;
+    var vals=ws.map(function(e){return e.w;});if(goal)vals.push(goal);
+    var lo=vals.length?Math.floor(Math.min.apply(null,vals))-2:60,hi=vals.length?Math.ceil(Math.max.apply(null,vals))+2:80;
+    var W=320,H=120,pad=6;
     function y(v){return H-pad-((v-lo)/(hi-lo))*(H-2*pad);}
-    var svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Bodyweight trend toward 75kg">';
-    // goal line 75
-    svg+='<line class="goal" x1="0" y1="'+y(75).toFixed(1)+'" x2="'+W+'" y2="'+y(75).toFixed(1)+'"/>';
-    svg+='<text class="glabel" x="'+(W-2)+'" y="'+(y(75)-4).toFixed(1)+'" text-anchor="end">75 goal</text>';
+    var svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Bodyweight trend">';
+    if(goal){svg+='<line class="goal" x1="0" y1="'+y(goal).toFixed(1)+'" x2="'+W+'" y2="'+y(goal).toFixed(1)+'"/>';
+      svg+='<text class="glabel" x="'+(W-2)+'" y="'+(y(goal)-4).toFixed(1)+'" text-anchor="end">'+goal+' goal</text>';}
     if(ws.length>=2){
-      var n=ws.length,step=n>1?W/(n-1):0,pts=[];
-      ws.forEach(function(e,i){pts.push([i*step,y(e.w)]);});
+      var n=ws.length,step=W/(n-1),pts=ws.map(function(e,i){return [i*step,y(e.w)];});
       var dLine=pts.map(function(p,i){return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1);}).join(" ");
-      var dArea=dLine+" L "+W+" "+(H-pad)+" L 0 "+(H-pad)+" Z";
-      svg+='<path class="area" d="'+dArea+'"/>';
-      svg+='<path class="line" d="'+dLine+'"/>';
-      var last=pts[n-1];
-      svg+='<circle class="dot" cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="3.5"/>';
+      svg+='<path class="area" d="'+dLine+" L "+W+" "+(H-pad)+" L 0 "+(H-pad)+' Z"/><path class="line" d="'+dLine+'"/>';
+      svg+='<circle class="dot" cx="'+pts[n-1][0].toFixed(1)+'" cy="'+pts[n-1][1].toFixed(1)+'" r="3.5"/>';
     }
-    svg+='</svg>';
-    if(ws.length<2){svg+='<p class="empty">Log a few days to see your trend line.</p>';}
+    svg+='</svg>';if(ws.length<2)svg+='<p class="empty">Log a few days to see your trend line.</p>';
     wrap.innerHTML=svg;
-    // entries (recent last 8, newest first)
     var el=$("wEntries");el.innerHTML="";
     if(!ws.length){el.innerHTML='<p class="empty">No weigh-ins yet.</p>';return;}
     ws.slice(-8).reverse().forEach(function(e,i){
       var row=document.createElement("div");row.className="entry";
       row.innerHTML='<span class="meta">'+fmtDay(e.d)+'</span><span style="flex:1"></span><span class="mono" style="font-weight:600">'+e.w.toFixed(1)+' kg</span>';
       if(i===0){var del=document.createElement("button");del.className="del";del.setAttribute("aria-label","Delete latest");del.textContent="×";
-        del.addEventListener("click",function(){var a=LS.get("wa-weights",[]);a.pop();LS.set("wa-weights",a);renderWeight();});row.appendChild(del);}
+        del.addEventListener("click",function(){var a=LS.get("wa-weights",[]);a.pop();LS.set("wa-weights",a);renderWeight();renderHeader();});row.appendChild(del);}
       el.appendChild(row);
     });
   }
   $("wSave").addEventListener("click",function(){
-    var v=parseFloat($("wInput").value);if(isNaN(v)||v<40||v>150){$("wInput").focus();return;}
+    var v=parseFloat($("wInput").value);if(isNaN(v)||v<30||v>200){$("wInput").focus();return;}
     var ws=LS.get("wa-weights",[]),t=todayISO();
     if(ws.length&&ws[ws.length-1].d===t){ws[ws.length-1].w=v;}else{ws.push({d:t,w:v});}
-    LS.set("wa-weights",ws);$("wInput").value="";renderWeight();
+    LS.set("wa-weights",ws);$("wInput").value="";renderWeight();renderHeader();
   });
 
-  /* ---------- LIFTS ---------- */
+  /* ---------- LIFTS: options = my split's exercises + anything already logged ---------- */
+  var LEGACY_LIFTS={bench:"Flat Bench",incline:"Incline Press",dips:"Weighted Dips",trap:"Trap-bar Deadlift",ohext:"Overhead Triceps Ext.",pulldown:"Lat Pulldown"};
+  function liftKey(nm){return "x:"+nm.toLowerCase().replace(/\s+/g," ").trim();}
+  function fillLiftSel(){
+    var sel=$("liftSel"),cur=sel.value||LS.get("wa-liftsel",""),seen={},opts=[];
+    prof().split.forEach(function(d){d.ex.forEach(function(e){var k=liftKey(e.nm);if(!seen[k]){seen[k]=1;opts.push([k,e.nm]);}});});
+    var all=LS.get("wa-lifts",{});
+    Object.keys(all).forEach(function(k){if(!seen[k]&&all[k]&&all[k].length){seen[k]=1;opts.push([k,LEGACY_LIFTS[k]||(LS.get("wa-liftnames",{})[k])||k.replace(/^x:/,"")]);}});
+    sel.innerHTML="";
+    if(!opts.length){var o=document.createElement("option");o.value="";o.textContent="Add exercises in Train first";sel.appendChild(o);sel.disabled=true;return;}
+    sel.disabled=false;
+    opts.forEach(function(o){var e=document.createElement("option");e.value=o[0];e.textContent=o[1];sel.appendChild(e);});
+    if(seen[cur])sel.value=cur;
+  }
   function renderLifts(){
-    var key=$("liftSel").value,all=LS.get("wa-lifts",{}),list=all[key]||[];
-    var el=$("liftEntries");el.innerHTML="";
+    var key=$("liftSel").value,el=$("liftEntries");el.innerHTML="";
+    if(!key){el.innerHTML='<p class="empty">No exercises to track yet.</p>';return;}
+    var list=(LS.get("wa-lifts",{})[key])||[];
     if(!list.length){el.innerHTML='<p class="empty">No sets logged for this lift yet.</p>';return;}
     var best=0;list.forEach(function(e){var o=e1rm(e.w,e.r);if(o>best)best=o;});
-    list.slice(-6).reverse().forEach(function(e,i,arr){
+    list.slice(-6).reverse().forEach(function(e,i){
       var o=e1rm(e.w,e.r),row=document.createElement("div");
       row.className="entry"+(o===best?" best":"");
-      row.innerHTML='<span class="meta">'+fmtDay(e.d)+'</span>'
-        +'<span style="flex:1;text-align:center" class="mono">'+e.w+' kg × '+e.r+'</span>'
-        +'<span class="e1">'+o+' e1RM</span>';
+      row.innerHTML='<span class="meta">'+fmtDay(e.d)+'</span><span style="flex:1;text-align:center" class="mono">'+e.w+' kg × '+e.r+'</span><span class="e1">'+o+' e1RM</span>';
       if(i===0){var del=document.createElement("button");del.className="del";del.setAttribute("aria-label","Delete latest");del.textContent="×";
         del.addEventListener("click",function(){var a=LS.get("wa-lifts",{});(a[key]=a[key]||[]).pop();LS.set("wa-lifts",a);renderLifts();});row.appendChild(del);}
       el.appendChild(row);
     });
   }
-  $("liftSel").addEventListener("change",renderLifts);
+  $("liftSel").addEventListener("change",function(){LS.set("wa-liftsel",$("liftSel").value);renderLifts();});
   $("liftSave").addEventListener("click",function(){
-    var w=parseFloat($("liftW").value),r=parseInt($("liftR").value,10);
+    var w=parseFloat($("liftW").value),r=parseInt($("liftR").value,10),key=$("liftSel").value;
+    if(!key)return;
     if(isNaN(w)||w<0||isNaN(r)||r<1){($("liftW").value?$("liftR"):$("liftW")).focus();return;}
-    var key=$("liftSel").value,all=LS.get("wa-lifts",{});
-    (all[key]=all[key]||[]).push({d:todayISO(),w:w,r:r});
+    var all=LS.get("wa-lifts",{});(all[key]=all[key]||[]).push({d:todayISO(),w:w,r:r});
     if(all[key].length>60)all[key]=all[key].slice(-60);
+    var names=LS.get("wa-liftnames",{});names[key]=$("liftSel").selectedOptions[0].textContent;LS.set("wa-liftnames",names);
     LS.set("wa-lifts",all);$("liftW").value="";$("liftR").value="";renderLifts();
   });
 
   /* ---------- BACKUP / EXPORT ---------- */
-  function allData(){return {app:"winter-arc",v:1,weights:LS.get("wa-weights",[]),lifts:LS.get("wa-lifts",{}),mymeals:LS.get("wa-mymeals",null),meals:LS.get("wa-meals",{}),recent:LS.get("wa-recent",[])};}
+  var BK_KEYS=["wa-weights","wa-lifts","wa-liftnames","wa-profile","wa-mymeals","wa-meals","wa-recent","wa-shop"];
+  function allData(){var d={app:"winter-arc",v:2};BK_KEYS.forEach(function(k){d[k]=LS.get(k,null);});
+    // v1 field names, so an older app version can still restore weights/lifts
+    d.weights=d["wa-weights"]||[];d.lifts=d["wa-lifts"]||{};return d;}
   function flash(m){$("expMsg").textContent=m;}
   $("expBtn").addEventListener("click",function(){
     var txt=JSON.stringify(allData());
     function fallback(){$("impWrap").hidden=false;var ta=$("impText");ta.value=txt;ta.focus();ta.select();flash("Select the text above and copy it manually.");}
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(function(){flash("Copied ✓ — paste it into our chat to revisit.");},fallback);
+      navigator.clipboard.writeText(txt).then(function(){flash("Copied ✓ — keep it somewhere safe.");},fallback);
     }else fallback();
   });
   $("impToggle").addEventListener("click",function(){$("impWrap").hidden=!$("impWrap").hidden;if(!$("impWrap").hidden)$("impText").focus();});
   $("impBtn").addEventListener("click",function(){
     try{var d=JSON.parse($("impText").value);
-      if(d&&d.app==="winter-arc"){
+      if(!d||d.app!=="winter-arc"){flash("That doesn't look like a Winter Arc backup.");return;}
+      if(d.v>=2){BK_KEYS.forEach(function(k){if(d[k]!=null)LS.set(k,d[k]);});}
+      else{ // v1 backups
         LS.set("wa-weights",Array.isArray(d.weights)?d.weights:[]);
-        LS.set("wa-lifts",(d.lifts&&typeof d.lifts==="object")?d.lifts:{});if(d.mymeals)LS.set("wa-mymeals",d.mymeals);if(d.meals)LS.set("wa-meals",d.meals);if(d.recent)LS.set("wa-recent",d.recent);
-        renderWeight();renderLifts();$("impWrap").hidden=true;$("impText").value="";flash("Restored ✓");
-      }else flash("That doesn't look like a Winter Arc backup.");
+        LS.set("wa-lifts",(d.lifts&&typeof d.lifts==="object")?d.lifts:{});
+        if(d.mymeals)LS.set("wa-mymeals",d.mymeals);if(d.meals)LS.set("wa-meals",d.meals);if(d.recent)LS.set("wa-recent",d.recent);
+      }
+      $("impWrap").hidden=true;$("impText").value="";flash("Restored ✓");
+      fillLiftSel();renderProfile();renderWeight();renderLifts();renderHeader();
     }catch(e){flash("Couldn't read that — check you pasted the whole thing.");}
   });
 
@@ -779,6 +813,7 @@
     Object.keys(meals).forEach(function(d){var s=dayTotal(meals[d]);if(s>0)out[d]=s;});
     return out;
   }
+  var CAL_VIEW=null;
   function isHit(v,d){return v===true||(typeof v==="number"&&v>=goalFor(d));}
   function renderChallenge(){
     var days=drange(CH_START,CH_END),t=todayISO();
@@ -786,6 +821,7 @@
     var board=LS.get("wa-board",{});
     var myName=LS.get("wa-myname","You")||"You";
     board[myName]=mine;
+    var view=(CAL_VIEW&&board[CAL_VIEW])?CAL_VIEW:myName,vcol=view===myName?mine:(board[view]||{});
     var names=Object.keys(board).filter(function(n){return n!==myName;});names.unshift(myName);
     var vs=$("vsBox");vs.innerHTML="";
     var scores=names.map(function(n){var h=board[n]||{},c=0;days.forEach(function(d){if(isHit(h[d],d))c++;});
@@ -793,20 +829,24 @@
     var top=Math.max.apply(null,scores.map(function(s){return s.c;}));
     scores.sort(function(a,b){return b.c-a.c||b.td-a.td;});
     scores.forEach(function(s,i){
-      var p=document.createElement("div");p.className="p"+(s.c===top&&top>0?" lead":"");
+      var p=document.createElement("button");p.type="button";p.className="p"+(s.c===top&&top>0?" lead":"")+(s.n===view?" sel":"");
+      p.setAttribute("aria-pressed",s.n===view?"true":"false");
+      p.addEventListener("click",function(){CAL_VIEW=s.n;renderChallenge();});
       p.innerHTML='<div class="rk">#'+(i+1)+(s.n===myName?' · you':'')+'</div><div class="who">'+esc(s.n||"—")+'</div><div class="sc">'+s.c+'</div><div class="sl">days hit</div><div class="td">today '+s.td.toLocaleString()+' / '+GOAL+'</div>';
       vs.appendChild(p);
     });
     if(scores.length<2){var p=document.createElement("div");p.className="p";p.innerHTML='<div class="who">friends</div><div class="sc">—</div><div class="sl">connect to see</div>';vs.appendChild(p);}
     var grid=$("calGrid");grid.innerHTML="";
     days.forEach(function(d){
-      var cell=document.createElement("div"),future=d>t,hit=isHit(mine[d],d);
+      var v=vcol[d],kc=typeof v==="number"?v:(v===true?goalFor(d):0);
+      var cell=document.createElement("div"),future=d>t,hit=isHit(v,d);
       cell.className="d"+(hit?" me-hit":"")+(d===t?" today":"")+(future?" future":"");
-      cell.innerHTML='<span class="dn">'+d.slice(8).replace(/^0/,"")+'</span><span class="mk">'+(hit?"✓":(future?"":"·"))+'</span>';
+      cell.title=fmtDay(d)+": "+kc+" kcal";
+      cell.innerHTML='<span class="dn">'+d.slice(8).replace(/^0/,"")+'</span><span class="mk">'+(hit?"✓":(future?"":(kc?(kc/1000).toFixed(1)+"k":"·")))+'</span>';
       grid.appendChild(cell);
     });
     var done=days.filter(function(d){return d<=t;}).length;
-    $("calSub").textContent="Day "+Math.max(0,done)+" of "+days.length+" · "+(scores.filter(function(x){return x.n===myName;})[0]||{c:0}).c+" hit so far";
+    $("calSub").textContent=(view===myName?"Your":view+"'s")+" calendar · Day "+Math.max(0,done)+" of "+days.length+" · "+(scores.filter(function(x){return x.n===view;})[0]||{c:0}).c+" hit · tap a name above to switch";
   }
 
   /* ====================================================
