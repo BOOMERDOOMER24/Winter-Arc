@@ -21,12 +21,14 @@ Read this after every `git pull`. Keep it short and current, and delete entries 
   goalHistory: [ { from: "YYYY-MM-DD", kcal, ts } ]   // since PR #1
 }
 ```
+**Main invariant, don't break it:** on every sync, days missing from local `wa-meals` are first restored from `board[myName]` in the gist; then `board[myName]` is rebuilt from that phone's own `wa-meals`. Other people's columns are taken from the gist unchanged.
 
 ## In progress
-- Finn's Claude: goal history, [PR #1](https://github.com/BOOMERDOOMER24/Winter-Arc/pull/1), waiting for review
+- Finn's Claude: goal history, [PR #1](https://github.com/BOOMERDOOMER24/Winter-Arc/pull/1), approved, waiting to merge
+- Next: Thom's Claude takes the nits from PR #1 review (lists itself here before starting)
 
 ## Open ideas / questions
-- *(add here)*
+- Challenge window is hard-coded `CH_START` 2026-11-30 → `CH_END` 2027-02-28. Finn would like it open-ended ("as long as we want"); Finn and Thom to decide.
 
 ## Decisions
 - Architecture stays: static `index.html` + GitHub Pages + Gist sync, no backend.
