@@ -631,7 +631,42 @@
     {id:"sn",nm:"Snack",kc:300,ds:"Banana + nuts, or cheese on dark bread"},
     {id:"dn",nm:"Dinner",kc:700,ds:"Pick one: quark bowl ★ / tuna pasta / egg scramble / lentil bowl"}
   ];
-  var GOAL=+LS.get("wa-goal",3000)||3000;
+  /* ---------- goal history: each day is judged by the goal valid on that day ----------
+     entries {from:"YYYY-MM-DD", kcal, ts}; merge = union keyed on "from", newest ts wins */
+  var GOAL_SEED={from:"2026-11-30",kcal:3000,ts:0};
+  function isoOfTs(ts){var d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function clampFrom(d){return d<GOAL_SEED.from?GOAL_SEED.from:d;}
+  function mergeHist(a,b){
+    var m={};(a||[]).concat(b||[]).forEach(function(e){
+      if(!e||typeof e.from!=="string"||!(+e.kcal>0))return;
+      var x={from:e.from,kcal:+e.kcal,ts:+e.ts||0};
+      if(!m[x.from]||x.ts>m[x.from].ts)m[x.from]=x;
+    });
+    return Object.keys(m).sort().map(function(k){return m[k];});
+  }
+  function histMaxTs(h){var t=0;(h||[]).forEach(function(e){if(e.ts>t)t=e.ts;});return t;}
+  // a goal set by an older app version (only goal/goalTs) becomes a history entry from the day it was set
+  function foldLegacy(h,goal,ts){
+    goal=+goal;ts=+ts||0;
+    if(goal>0&&ts>histMaxTs(h))h=mergeHist(h,[{from:clampFrom(isoOfTs(ts)),kcal:goal,ts:ts}]);
+    return h;
+  }
+  function goalFor(d){
+    var h=GOAL_HIST,g=h.length?h[0].kcal:GOAL_SEED.kcal;
+    for(var i=0;i<h.length;i++){if(h[i].from<=d)g=h[i].kcal;else break;}
+    return g;
+  }
+  var GOAL_HIST=LS.get("wa-goalhist",null);
+  if(!Array.isArray(GOAL_HIST)||!GOAL_HIST.length){
+    GOAL_HIST=foldLegacy(mergeHist([GOAL_SEED],[]),LS.get("wa-goal",0),LS.get("wa-goal-ts",0));
+  }else GOAL_HIST=mergeHist(GOAL_HIST,[]);
+  var GOAL=goalFor(todayISO());
+  function saveHist(h){
+    GOAL_HIST=mergeHist(h,[]);LS.set("wa-goalhist",GOAL_HIST);
+    GOAL=goalFor(todayISO());LS.set("wa-goal",GOAL);LS.set("wa-goal-ts",histMaxTs(GOAL_HIST));
+    var gi=$("goalIn");if(gi)gi.value=GOAL;
+  }
+  LS.set("wa-goalhist",GOAL_HIST);
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
   function myMeals(){var m=LS.get("wa-mymeals",null);return Array.isArray(m)&&m.length?m:DEFAULT_MEALS;}
   function findMeal(id){var a=myMeals().concat(DEFAULT_MEALS);for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];return null;}
@@ -744,7 +779,7 @@
     Object.keys(meals).forEach(function(d){var s=dayTotal(meals[d]);if(s>0)out[d]=s;});
     return out;
   }
-  function isHit(v){return v===true||(typeof v==="number"&&v>=GOAL);}
+  function isHit(v,d){return v===true||(typeof v==="number"&&v>=goalFor(d));}
   function renderChallenge(){
     var days=drange(CH_START,CH_END),t=todayISO();
     var mine=myTotals();
@@ -753,7 +788,7 @@
     board[myName]=mine;
     var names=Object.keys(board).filter(function(n){return n!==myName;});names.unshift(myName);
     var vs=$("vsBox");vs.innerHTML="";
-    var scores=names.map(function(n){var h=board[n]||{},c=0;days.forEach(function(d){if(isHit(h[d]))c++;});
+    var scores=names.map(function(n){var h=board[n]||{},c=0;days.forEach(function(d){if(isHit(h[d],d))c++;});
       var td=typeof h[t]==="number"?h[t]:(h[t]===true?GOAL:0);return {n:n,c:c,td:td};});
     var top=Math.max.apply(null,scores.map(function(s){return s.c;}));
     scores.sort(function(a,b){return b.c-a.c||b.td-a.td;});
@@ -765,7 +800,7 @@
     if(scores.length<2){var p=document.createElement("div");p.className="p";p.innerHTML='<div class="who">friends</div><div class="sc">—</div><div class="sl">connect to see</div>';vs.appendChild(p);}
     var grid=$("calGrid");grid.innerHTML="";
     days.forEach(function(d){
-      var cell=document.createElement("div"),future=d>t,hit=isHit(mine[d]);
+      var cell=document.createElement("div"),future=d>t,hit=isHit(mine[d],d);
       cell.className="d"+(hit?" me-hit":"")+(d===t?" today":"")+(future?" future":"");
       cell.innerHTML='<span class="dn">'+d.slice(8).replace(/^0/,"")+'</span><span class="mk">'+(hit?"✓":(future?"":"·"))+'</span>';
       grid.appendChild(cell);
@@ -795,11 +830,12 @@
   function syncFlash(m){$("syncMsg").textContent=m;}
   var GIST_FILE="winter-arc-challenge.json";
   function ghHeaders(){return {"Authorization":"token "+SYNC.token,"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
-  function localGoal(){return {goal:GOAL,ts:+LS.get("wa-goal-ts",0)||0};}
+  function localGoal(){return {goal:GOAL,ts:histMaxTs(GOAL_HIST)};}
+  var GIST_RAW={}; // last read file content — unknown fields are written back untouched
   function createGist(){
     var body={description:"Winter Arc 3000 Challenge board",public:false,files:{}};
     var g=localGoal();
-    body.files[GIST_FILE]={content:JSON.stringify({app:"winter-arc-challenge",board:{},goal:g.goal,goalTs:g.ts})};
+    body.files[GIST_FILE]={content:JSON.stringify({app:"winter-arc-challenge",board:{},goal:g.goal,goalTs:g.ts,goalHistory:GOAL_HIST})};
     return fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)throw new Error("create "+r.status);return r.json();}).then(function(j){return j.id;});
   }
@@ -807,24 +843,29 @@
     return fetch("https://api.github.com/gists/"+SYNC.gist,{headers:ghHeaders(),cache:"no-store"})
       .then(function(r){if(!r.ok)throw new Error("read "+r.status);return r.json();})
       .then(function(j){var f=j.files&&j.files[GIST_FILE];var c=f&&f.content?JSON.parse(f.content):{};
-        return {board:c.board||{},goal:+c.goal||0,goalTs:+c.goalTs||0};});
+        GIST_RAW=(c&&typeof c==="object")?c:{};
+        return {board:c.board||{},goal:+c.goal||0,goalTs:+c.goalTs||0,goalHistory:Array.isArray(c.goalHistory)?c.goalHistory:[]};});
   }
   function writeGist(board){
-    var g=localGoal(),body={files:{}};
-    body.files[GIST_FILE]={content:JSON.stringify({app:"winter-arc-challenge",board:board,goal:g.goal,goalTs:g.ts})};
+    var g=localGoal(),body={files:{}},out={};
+    Object.keys(GIST_RAW).forEach(function(k){out[k]=GIST_RAW[k];});
+    out.app="winter-arc-challenge";out.board=board;out.goal=g.goal;out.goalTs=g.ts;out.goalHistory=GOAL_HIST;
+    body.files[GIST_FILE]={content:JSON.stringify(out)};
     return fetch("https://api.github.com/gists/"+SYNC.gist,{method:"PATCH",headers:ghHeaders(),body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)throw new Error("write "+r.status);return r.json();});
   }
-  function setGoal(v,ts){GOAL=v;LS.set("wa-goal",v);LS.set("wa-goal-ts",ts);$("goalIn").value=v;}
+  // a new target applies from today on (or from the start, if set before it); past days keep theirs
+  function setGoal(v,ts){saveHist(mergeHist(GOAL_HIST,[{from:clampFrom(todayISO()),kcal:v,ts:ts}]));}
   // newer goal wins (whoever changed it last), then merge boards and push my column
   function syncOnce(){
     return readGist().then(function(r){
-      if(r.goal&&r.goalTs>localGoal().ts)setGoal(r.goal,r.goalTs);
+      // goals: union of both histories; a newer goal from an old-version phone becomes an entry
+      saveHist(foldLegacy(mergeHist(GOAL_HIST,r.goalHistory),r.goal,r.goalTs));
       // gist = backup: restore any of my days missing locally (new phone, cleared/evicted storage)
       var mineR=r.board[SYNC.name||"You"]||{},lm=LS.get("wa-meals",{}),restored=0;
       Object.keys(mineR).forEach(function(d){
         var v=mineR[d];if(lm[d])return;
-        var kc=typeof v==="number"?v:(v===true?GOAL:0);
+        var kc=typeof v==="number"?v:(v===true?goalFor(d):0);
         if(kc>0){lm[d]={_x:[{nm:"Restored from board",kc:kc}]};restored++;}
       });
       if(restored)LS.set("wa-meals",lm);
